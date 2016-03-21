@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<info>
+	<id>user_dp</id>
+	<name>MARS DP authentication</name>
+	<description>Authenticate user login based on Departmental Portal User ID and Department ID</description>
+	<licence></licence>
+	<author>MARS</author>
+	<requiremin>8.2</requiremin>
+	<types>
+		<prelogin/>
+		<authentication/>
+	</types>
+</info>
