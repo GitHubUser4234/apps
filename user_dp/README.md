@@ -1,6 +1,10 @@
-External user authentication
+IApacheBackend failure
 ============================
-Authenticate user login based on Departmental Portal User ID and Department ID. The pattern of an ownCloud user name is "<DP DEPTID>_<DP UID>" in lower case.
+Simple test case to prove IApacheBackend failure. To reproduce do this:
 
-If something does not work, check the log file at `owncloud/data/owncloud.log`.
-
+1) Login as ownCloud admin.
+2) Create user "dep_tester123".
+3) Logout.
+4) Install and enable this app.
+5) Access ownCloud. 
+6) See error in ownCloud log.
