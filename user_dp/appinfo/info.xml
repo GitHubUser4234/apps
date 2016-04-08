@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <info>
 	<id>user_dp</id>
-	<name>MARS DP authentication</name>
-	<description>Authenticate user login based on Departmental Portal User ID and Department ID</description>
+	<name>IApacheBackend failure</name>
+	<description>Simple test case to prove IApacheBackend failure</description>
 	<licence></licence>
 	<author>MARS</author>
 	<requiremin>8.2</requiremin>
