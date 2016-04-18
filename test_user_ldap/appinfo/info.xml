@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<info>
+	<id>test_user_ldap</id>
+	<name>TEST LDAP</name>
+	<description>Create and delete a user in LDAP, set password of a user in LDAP.</description>
+	<licence></licence>
+	<author>TEST</author>
+	<requiremin>8.2</requiremin>
+	<types>
+	</types>
+</info>
