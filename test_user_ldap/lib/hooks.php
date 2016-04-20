@@ -43,7 +43,7 @@ class Hooks {
 			return false;
 		}
 
-		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID())->getConnectionResource();
+		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available
 			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
@@ -65,8 +65,7 @@ class Hooks {
 			return false;
 		}
 		
-		$connection = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
-		$cr = $connection->getConnectionResource();
+		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available
 			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
@@ -76,5 +75,25 @@ class Hooks {
 		$this->ldap->createUser($cr, $userDN, $params['password']);
 	}
 	
-	
+	/**
+	 * Delete a user in LDAP
+	 *
+	 * @param array $params
+	 */
+	public function deleteUserHook($params) {
+		$sessionUser = \OC::$server->getUserSession()->getUser();
+		if (!$sessionUser) {
+			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
+			return false;
+		}
+		
+		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
+		if(!$this->ldap->isResource($cr)) {
+			//LDAP not available
+			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
+		}
+		$uid = $params['uid'];
+		$userDN = "uid={$uid},{$connection->ldapBaseUsers}";
+		$this->ldap->createUser($cr, $userDN, $params['password']);
+	}
 }

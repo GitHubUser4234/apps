@@ -44,6 +44,15 @@ class LDAP {
 	public function createUser($link, $userDN, $newPassword) {
 		return $this->invokeLDAPMethod('add', $link, $userDN, array('userPassword' => $hashedPassword));
 	}
+	
+	/**
+	 * @param LDAP $link
+	 * @param LDAP $userDN
+	 * @return mixed
+	 */
+	public function deleteUser($link, $userDN) {
+		return $this->invokeLDAPMethod('delete', $link, $userDN);
+	}
 
 	/**
 	 * @param LDAP $link
