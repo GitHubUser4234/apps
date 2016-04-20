@@ -43,13 +43,13 @@ class Hooks {
 			return false;
 		}
 
+		$uid = $params['uid'];
+		$userDN = \OC::$server->getLDAPProvider()->getUserDN($sessionUser->getUID(), $uid);
 		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available
 			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
 		}
-		$uid = $params['uid'];
-		$userDN = \OC::$server->getLDAPProvider()->getUserDN($uid);
 		return $this->ldap->setPassword($cr, $userDN, $params['password']);
 	}
 	
@@ -86,7 +86,7 @@ class Hooks {
 			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
 			return false;
 		}
-		
+		$this->logger->debug('$sessionUser->getUID().'.$sessionUser->getUID(), ['app' => 'test_user_ldap']);
 		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available
