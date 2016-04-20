@@ -25,9 +25,10 @@ class Hooks {
 	 * Constructor
 	 *
 	 */
-	public function __construct(ILogger $logger) {
-		$this->logger = $logger;
-		$this->ldap = new LDAP($logger);
+	public function __construct() {
+		$this->logger = \OC::$server->getLogger();
+		$this->ldap = new LDAP($this->logger);
+		$this->connectHooks();
 	}
 
 	/**
@@ -42,7 +43,7 @@ class Hooks {
 			return false;
 		}
 
-		$cr = \OC::$server->getLDAPProvider()->getLDAPAccess($sessionUser->getUID())->connection->getConnectionResource();
+		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID())->getConnectionResource();
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available
 			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
@@ -64,7 +65,7 @@ class Hooks {
 			return false;
 		}
 		
-		$connection = \OC::$server->getLDAPProvider()->getLDAPAccess($sessionUser->getUID())->connection;
+		$connection = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
 		$cr = $connection->getConnectionResource();
 		if(!$this->ldap->isResource($cr)) {
 			//LDAP not available

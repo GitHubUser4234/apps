@@ -1,5 +1,3 @@
 <?php
 
-//new \OCA\egis_user_ldap\lib\Writer(\OC::$server->getLogger());
-
-\OC::$server->getLDAPProvider()->getLDAPConnection('root');
+$hooks = new OCA\test_user_ldap\lib\Hooks();
