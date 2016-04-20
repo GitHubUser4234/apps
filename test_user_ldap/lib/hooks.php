@@ -16,9 +16,9 @@ class Hooks {
 	private $logger;
 	
 	public function connectHooks() {
-		\OCP\Util::connectHook('OC_User', 'pre_setPassword', 'OCA\test_user_ldap\lib\Hooks', 'setPasswordHook');
-		\OCP\Util::connectHook('OC_User', 'pre_createUser', 'OCA\test_user_ldap\lib\Hooks', 'createUserHook');
-		\OCP\Util::connectHook('OC_User', 'pre_deleteUser', 'OCA\test_user_ldap\lib\Hooks', 'deleteUserHook');
+		\OCP\Util::connectHook('OC_User', 'pre_setPassword', $this, 'setPasswordHook');
+		\OCP\Util::connectHook('OC_User', 'pre_createUser', $this, 'createUserHook');
+		\OCP\Util::connectHook('OC_User', 'pre_deleteUser', $this, 'deleteUserHook');
 	}
 	
 	/**
