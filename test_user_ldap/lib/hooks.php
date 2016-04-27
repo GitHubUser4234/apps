@@ -40,18 +40,23 @@ class Hooks {
 	public function pre_setPasswordHook($params) {
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
-			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
-			return false;
+			$this->logger->error('Session user not found in pre_setPasswordHook.', ['app' => 'test_user_ldap']);
+			die();
 		}
 
-		$uid = $params['uid'];
-		$userDN = \OC::$server->getLDAPProvider()->getUserDN($uid);
-		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($uid);
-		if(!$this->ldap->isResource($cr)) {
-			//LDAP not available
-			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
+		try {
+			$uid = $params['uid'];
+			$userDN = \OC::$server->getLDAPProvider()->getUserDN($uid);
+			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($uid);
+			if(!$this->ldap->isResource($cr)) {
+				//LDAP not available
+				throw new \Exception('LDAP resource not available.');
+			}
+			$this->ldap->setPassword($cr, $userDN, $params['password']);
+		} catch (\Exception $e) {
+			$this->logger->logException($e);
+			die();
 		}
-		return $this->ldap->setPassword($cr, $userDN, $params['password']);
 	}
 	
 	/**
@@ -62,20 +67,25 @@ class Hooks {
 	public function pre_createUserHook($params) {
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
-			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
-			return false;
+			$this->logger->error('Session user not found in pre_createUserHook.', ['app' => 'test_user_ldap']);
+			die();
 		}
-
-		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
-		if(!$this->ldap->isResource($cr)) {
-			//LDAP not available
-			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
+		
+		try {
+			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
+			if(!$this->ldap->isResource($cr)) {
+				//LDAP not available
+				throw new \Exception('LDAP resource not available.');
+			}
+			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
+			$uid = $params['uid'];
+			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
+			$this->logger->debug('pre_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
+			$this->ldap->createUser($cr, $userDN, $uid, $params['password']);
+		} catch (\Exception $e) {
+			$this->logger->logException($e);
+			die();
 		}
-		$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
-		$uid = $params['uid'];
-		$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-		$this->logger->debug('pre_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-		$this->ldap->createUser($cr, $userDN, $uid, $params['password']);
 	}
 	
 	/**
@@ -86,15 +96,20 @@ class Hooks {
 	public function post_createUserHook($params) {
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
-			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
-			return false;
+			$this->logger->error('Session user not found in post_createUserHook.', ['app' => 'test_user_ldap']);
+			die();
 		}
 		
-		$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
-		$uid = $params['uid'];
-		$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-		$this->logger->debug('post_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-		\OC::$server->getLDAPProvider()->getUserName($sessionUser->getUID(), $userDN);
+		try {
+			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
+			$uid = $params['uid'];
+			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
+			$this->logger->debug('post_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
+			\OC::$server->getLDAPProvider()->getUserName($sessionUser->getUID(), $userDN);
+		} catch (\Exception $e) {
+			$this->logger->logException($e);
+			die();
+		}
 	}
 	
 	/**
@@ -105,19 +120,24 @@ class Hooks {
 	public function pre_deleteUserHook($params) {
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
-			$this->logger->debug('Session user not found.', ['app' => 'test_user_ldap']);
-			return false;
+			$this->logger->error('Session user not found in pre_deleteUserHook.', ['app' => 'test_user_ldap']);
+			die();
 		}
 
-		$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
-		if(!$this->ldap->isResource($cr)) {
-			//LDAP not available
-			$this->logger->debug('LDAP resource not available.', ['app' => 'test_user_ldap']);
+		try {
+			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
+			if(!$this->ldap->isResource($cr)) {
+				//LDAP not available
+				throw new \Exception('LDAP resource not available.');
+			}
+			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
+			$uid = $params['uid'];
+			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
+			$this->logger->debug('pre_deleteUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
+			$this->ldap->deleteUser($cr, $userDN);
+		} catch (\Exception $e) {
+			$this->logger->logException($e);
+			die();
 		}
-		$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
-		$uid = $params['uid'];
-		$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-		$this->logger->debug('pre_deleteUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-		$this->ldap->deleteUser($cr, $userDN);
 	}
 }
