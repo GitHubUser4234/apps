@@ -41,8 +41,23 @@ class LDAP {
 	 * @param LDAP $newPassword
 	 * @return mixed
 	 */
-	public function createUser($link, $userDN, $newPassword) {
-		return $this->invokeLDAPMethod('add', $link, $userDN, array('userPassword' => $hashedPassword));
+	public function createUser($link, $userDN, $uid, $newPassword) {
+		$info["cn"] = $uid;
+		$info["sn"] = $uid;
+		$info["uid"] = $uid;
+		$info["displayName"] = $uid;
+		$info["homeDirectory"] = $uid;
+		$info["gidNumber"]="0";
+		$info["uidNumber"]="53722";
+		/*$info["objectclass"]="posixAccount";
+		$info["objectclass"]="top";
+		$info["objectclass"]="inetOrgPerson";*/
+		$info["objectclass"][0]= "top";
+		$info["objectclass"][1] = "person";
+		$info["objectclass"][2] = "inetOrgPerson";
+		$info["objectclass"][3] = "posixAccount";
+		$info["userPassword"] = $newPassword;
+		return $this->invokeLDAPMethod('add', $link, $userDN, $info);
 	}
 	
 	/**
@@ -86,6 +101,10 @@ class LDAP {
 	 * @return bool true if it is a resource, false otherwise
 	 */
 	public function isResource($resource) {
+		ob_start();
+		var_dump($resource);
+		$result = ob_get_clean();
+		$this->logger->debug('$result '.$result, ['app' => 'test_user_ldap']);
 		return is_resource($resource);
 	}
 
