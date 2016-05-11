@@ -14,6 +14,7 @@ class Hooks {
     
 	private $ldap;
 	private $logger;
+	private $dbBackend = null;
 	
 	public function connectHooks() {
 		\OCP\Util::connectHook('OC_User', 'pre_setPassword', $this, 'pre_setPasswordHook');
@@ -38,6 +39,11 @@ class Hooks {
 	 * @param array $params
 	 */
 	public function pre_setPasswordHook($params) {
+		/*$array = array('status' => "Failure", 'data' => array('message'=>"testesssas sas"));
+		$json = json_encode($array);
+		header('Content-Type: application/json');
+		echo $json;
+		die();*/
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
 			$this->logger->error('Session user not found in pre_setPasswordHook.', ['app' => 'test_user_ldap']);
@@ -82,6 +88,11 @@ class Hooks {
 			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
 			$this->logger->debug('pre_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
 			$this->ldap->createUser($cr, $userDN, $uid, $params['password']);
+			
+			//temporarily remove DB backend
+			$this->dbBackend = $this->getDBBackend();
+			$this->logger->debug('pre_createUserHook dbBackend: '.get_class($this->dbBackend), ['app' => 'test_user_ldap']);
+			\OC::$server->getUserManager()->removeBackend($this->dbBackend);
 		} catch (\Exception $e) {
 			$this->logger->logException($e);
 			die();
@@ -101,11 +112,15 @@ class Hooks {
 		}
 		
 		try {
+			//readd DB backend
+			\OC::$server->getUserManager()->registerBackend($this->dbBackend);
+			$this->dbBackend = null;
+			
 			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
 			$uid = $params['uid'];
 			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
 			$this->logger->debug('post_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-			\OC::$server->getLDAPProvider()->getUserName($sessionUser->getUID(), $userDN);
+			\OC::$server->getLDAPProvider()->getUserName($userDN);
 		} catch (\Exception $e) {
 			$this->logger->logException($e);
 			die();
@@ -138,6 +153,15 @@ class Hooks {
 		} catch (\Exception $e) {
 			$this->logger->logException($e);
 			die();
+		}
+	}
+	
+	private function getDBBackend(){
+		$backends = \OC::$server->getUserManager()->getBackends();
+		foreach ($backends as $backend) {
+			if ($backend instanceof \OC_User_Database) {
+				return $backend;
+			}
 		}
 	}
 }
