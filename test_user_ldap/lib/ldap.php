@@ -46,16 +46,16 @@ class LDAP {
 		$info["sn"] = $uid;
 		$info["uid"] = $uid;
 		$info["displayName"] = $uid;
-		$info["homeDirectory"] = $uid;
-		$info["gidNumber"]="0";
-		$info["uidNumber"]="53722";
+		//$info["homeDirectory"] = $uid;
+		//$info["gidNumber"]="0";
+		//$info["uidNumber"]="53722";
 		/*$info["objectclass"]="posixAccount";
 		$info["objectclass"]="top";
 		$info["objectclass"]="inetOrgPerson";*/
 		$info["objectclass"][0]= "top";
 		$info["objectclass"][1] = "person";
 		$info["objectclass"][2] = "inetOrgPerson";
-		$info["objectclass"][3] = "posixAccount";
+		$info["objectclass"][3] = "organizationalPerson";
 		$info["userPassword"] = $newPassword;
 		return $this->invokeLDAPMethod('add', $link, $userDN, $info);
 	}
@@ -83,6 +83,14 @@ class LDAP {
 	 */
 	public function error($link) {
 		return $this->invokeLDAPMethod('error', $link);
+	}
+	
+	/**
+	 * @param resource $link
+	 * @return bool|mixed
+	 */
+	public function unbind($link) {
+		return $this->invokeLDAPMethod('unbind', $link);
 	}
 
 	/**

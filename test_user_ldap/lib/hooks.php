@@ -2,6 +2,7 @@
 namespace OCA\test_user_ldap\lib;
 
 use OCP\ILogger;
+use OCP\LDAP\IDeletionFlagSupport;
 
 /**
  * Hooks to create and delete a user in LDAP, and to set the password of a user in LDAP.
@@ -18,9 +19,11 @@ class Hooks {
 	
 	public function connectHooks() {
 		\OCP\Util::connectHook('OC_User', 'pre_setPassword', $this, 'pre_setPasswordHook');
+		\OCP\Util::connectHook('OC_User', 'post_setPassword', $this, 'post_setPasswordHook');
 		\OCP\Util::connectHook('OC_User', 'pre_createUser', $this, 'pre_createUserHook');
 		\OCP\Util::connectHook('OC_User', 'post_createUser', $this, 'post_createUserHook');
 		\OCP\Util::connectHook('OC_User', 'pre_deleteUser', $this, 'pre_deleteUserHook');
+		\OCP\Util::connectHook('OC_User', 'post_deleteUser', $this, 'post_deleteUserHook');
 	}
 	
 	/**
@@ -34,7 +37,7 @@ class Hooks {
 	}
 
 	/**
-	 * Set user password in LDAP
+	 * Remove DB backend before setting user password in LDAP
 	 *
 	 * @param array $params
 	 */
@@ -50,23 +53,31 @@ class Hooks {
 			die();
 		}
 
-		try {
-			$uid = $params['uid'];
-			$userDN = \OC::$server->getLDAPProvider()->getUserDN($uid);
-			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($uid);
-			if(!$this->ldap->isResource($cr)) {
-				//LDAP not available
-				throw new \Exception('LDAP resource not available.');
-			}
-			$this->ldap->setPassword($cr, $userDN, $params['password']);
-		} catch (\Exception $e) {
-			$this->logger->logException($e);
-			die();
-		}
+		$this->removeDBBackend();
 	}
 	
 	/**
-	 * Create a user in LDAP
+	 * Readd DB backend after setting a user password in LDAP
+	 *
+	 * @param array $params
+	 */
+	public function post_setPasswordHook($params) {
+		/*$array = array('status' => "Failure", 'data' => array('message'=>"testesssas sas"));
+		$json = json_encode($array);
+		header('Content-Type: application/json');
+		echo $json;
+		die();*/
+		$sessionUser = \OC::$server->getUserSession()->getUser();
+		if (!$sessionUser) {
+			$this->logger->error('Session user not found in post_setPasswordHook.', ['app' => 'test_user_ldap']);
+			die();
+		}
+
+		$this->readdDBBackend();
+	}
+	
+	/**
+	 * Remove DB backend before creating a user in LDAP
 	 *
 	 * @param array $params
 	 */
@@ -77,30 +88,11 @@ class Hooks {
 			die();
 		}
 		
-		try {
-			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
-			if(!$this->ldap->isResource($cr)) {
-				//LDAP not available
-				throw new \Exception('LDAP resource not available.');
-			}
-			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
-			$uid = $params['uid'];
-			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-			$this->logger->debug('pre_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-			$this->ldap->createUser($cr, $userDN, $uid, $params['password']);
-			
-			//temporarily remove DB backend
-			$this->dbBackend = $this->getDBBackend();
-			$this->logger->debug('pre_createUserHook dbBackend: '.get_class($this->dbBackend), ['app' => 'test_user_ldap']);
-			\OC::$server->getUserManager()->removeBackend($this->dbBackend);
-		} catch (\Exception $e) {
-			$this->logger->logException($e);
-			die();
-		}
+		$this->removeDBBackend();
 	}
 	
 	/**
-	 * Create owncloud user<->LDAP user mapping for a newly created LDAP user
+	 * Readd DB backend after creating a user in LDAP
 	 *
 	 * @param array $params
 	 */
@@ -111,20 +103,7 @@ class Hooks {
 			die();
 		}
 		
-		try {
-			//readd DB backend
-			\OC::$server->getUserManager()->registerBackend($this->dbBackend);
-			$this->dbBackend = null;
-			
-			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
-			$uid = $params['uid'];
-			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-			$this->logger->debug('post_createUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
-			\OC::$server->getLDAPProvider()->getUserName($userDN);
-		} catch (\Exception $e) {
-			$this->logger->logException($e);
-			die();
-		}
+		$this->readdDBBackend();
 	}
 	
 	/**
@@ -139,29 +118,87 @@ class Hooks {
 			die();
 		}
 
+		$cr = null;
+		$exception = null;
 		try {
-			$cr = \OC::$server->getLDAPProvider()->getLDAPConnection($sessionUser->getUID());
+			$ldapProvider = \OC::$server->getLDAPProvider();
+			$cr = $ldapProvider->getLDAPConnection($sessionUser->getUID());
 			if(!$this->ldap->isResource($cr)) {
 				//LDAP not available
 				throw new \Exception('LDAP resource not available.');
 			}
-			$ldapBaseUsers = \OC::$server->getLDAPProvider()->getLDAPBaseUsers($sessionUser->getUID());
 			$uid = $params['uid'];
-			$userDN = "uid={$uid},{$ldapBaseUsers[0]}";
-			$this->logger->debug('pre_deleteUserHook user DN: '.$userDN, ['app' => 'test_user_ldap']);
+			$userDN = $ldapProvider->getUserDN($uid);
+			$this->logger->debug('deleteUser user DN: '.$userDN, ['app' => 'test_user_ldap']);
 			$this->ldap->deleteUser($cr, $userDN);
+			if($ldapProvider instanceof IDeletionFlagSupport) {
+				$ldapProvider->flagRecord($uid);
+				$this->logger->debug('deleteUser flagRecord: '.$uid, ['app' => 'test_user_ldap']);
+			}
+		} catch (\Exception $e) {
+			$exception = $e;
+			$this->logger->logException($e);
+		}
+		if(!is_null($cr)) {
+			try {$this->ldap->unbind($cr);}catch (\Exception $e) {/*ignored*/}
+		}
+		if(!is_null($exception)) {
+			die();
+		}
+		
+		//$this->removeDBBackend();
+	}
+	
+	/**
+	 * Clear cache after deleting a user in LDAP
+	 *
+	 * @param array $params
+	 */
+	public function post_deleteUserHook($params) {
+		$sessionUser = \OC::$server->getUserSession()->getUser();
+		if (!$sessionUser) {
+			$this->logger->error('Session user not found in post_deleteUserHook.', ['app' => 'test_user_ldap']);
+			die();
+		}
+		//clear cache
+		\OC::$server->getLDAPProvider()->clearCache($sessionUser->getUID());
+		
+		//$this->readdDBBackend();
+	}
+	
+	/**
+	 * Temporarily remove DB backend for this process
+	 *
+	 */
+	private function removeDBBackend() {
+		try {
+			$backends = \OC::$server->getUserManager()->getBackends();
+			foreach ($backends as $backend) {
+				if ($backend instanceof \OC_User_Database) {
+					$this->dbBackend = $backend;
+					$this->logger->debug('removeDBBackend dbBackend: '.get_class($this->dbBackend), ['app' => 'test_user_ldap']);
+					\OC::$server->getUserManager()->removeBackend($this->dbBackend);
+					break;
+				}
+			}
 		} catch (\Exception $e) {
 			$this->logger->logException($e);
 			die();
 		}
 	}
 	
-	private function getDBBackend(){
-		$backends = \OC::$server->getUserManager()->getBackends();
-		foreach ($backends as $backend) {
-			if ($backend instanceof \OC_User_Database) {
-				return $backend;
-			}
+	/**
+	 * Readd DB backend for this process
+	 *
+	 */
+	private function readdDBBackend() {
+		try {
+			$this->logger->debug('readdDBBackend dbBackend: '.get_class($this->dbBackend), ['app' => 'test_user_ldap']);
+			\OC::$server->getUserManager()->registerBackend($this->dbBackend);
+			$this->dbBackend = null;
+		} catch (\Exception $e) {
+			$this->logger->logException($e);
+			die();
 		}
 	}
 }
