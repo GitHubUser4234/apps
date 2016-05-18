@@ -57,6 +57,7 @@ class LDAP {
 		$info["objectclass"][2] = "inetOrgPerson";
 		$info["objectclass"][3] = "organizationalPerson";
 		$info["userPassword"] = $newPassword;
+		
 		return $this->invokeLDAPMethod('add', $link, $userDN, $info);
 	}
 	

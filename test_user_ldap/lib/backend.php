@@ -124,7 +124,7 @@ use OCP\ILogger;
 	 * @param string $password The new password
 	 * @return bool
 	 *
-	 */
+	 *
 	public function setPassword($uid, $password) {
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
@@ -144,7 +144,7 @@ use OCP\ILogger;
 			$this->logger->logException($e);
 			throw $e;
 		}
-	}
+	}*/
 
 	/**
 	 * Backend name to be shown in user management

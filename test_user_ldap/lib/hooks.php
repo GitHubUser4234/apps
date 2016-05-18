@@ -49,11 +49,33 @@ class Hooks {
 		die();*/
 		$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
-			$this->logger->error('Session user not found in pre_setPasswordHook.', ['app' => 'test_user_ldap']);
+			throw new \Exception('Session user not found in setPassword.', ['app' => 'test_user_ldap']);
+		}
+
+		$cr = null;
+		$exception = null;
+		try {
+			$ldapProvider = \OC::$server->getLDAPProvider();
+			$uid = $params['uid'];
+			$userDN = $ldapProvider->getUserDN($uid);
+			$cr = $ldapProvider->getLDAPConnection($uid);
+			if(!$this->ldap->isResource($cr)) {
+				//LDAP not available
+				throw new \Exception('LDAP resource not available.');
+			}
+			$this->ldap->setPassword($cr, $userDN, $params['password']);
+		} catch (\Exception $e) {
+			$exception = $e;
+			$this->logger->logException($e);
+		}
+		if(!is_null($cr)) {
+			try {$this->ldap->unbind($cr);}catch (\Exception $e) {/*ignored*/}
+		}
+		if(!is_null($exception)) {
 			die();
 		}
 
-		$this->removeDBBackend();
+		//$this->removeDBBackend();
 	}
 	
 	/**
@@ -67,13 +89,13 @@ class Hooks {
 		header('Content-Type: application/json');
 		echo $json;
 		die();*/
-		$sessionUser = \OC::$server->getUserSession()->getUser();
+		/*$sessionUser = \OC::$server->getUserSession()->getUser();
 		if (!$sessionUser) {
 			$this->logger->error('Session user not found in post_setPasswordHook.', ['app' => 'test_user_ldap']);
 			die();
-		}
+		}*/
 
-		$this->readdDBBackend();
+		//$this->readdDBBackend();
 	}
 	
 	/**
